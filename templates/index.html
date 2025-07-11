@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Agua Purificada Azul</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f9ff;
+        }
+        .card-custom {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .card-title {
+            font-weight: bold;
+            color: #045faa;
+        }
+        .section-title {
+            color: #045faa;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #b6dbff;
+            padding-bottom: 5px;
+        }
+        .btn-primary {
+            background-color: #0077cc;
+            border-color: #0077cc;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+        }
+        .table th {
+            background-color: #e3f2fd;
+        }
+    </style>
+</head>
+<body>
+<div class="container my-4">
+    <h2 class="text-center text-primary fw-bold mb-4">💧 Agua Purificada Azul</h2>
+
+    <form class="row g-2 mb-4" method="get" action="/">
+        <div class="col-md-3">
+            <input type="date" name="fecha" class="form-control" value="{{ fecha_seleccionada }}">
+        </div>
+        <div class="col-md-auto">
+            <button type="submit" class="btn btn-outline-primary">Filtrar por fecha</button>
+        </div>
+        <div class="col-md-auto">
+            <a href="/exportar_pdf?fecha={{ fecha_seleccionada }}" class="btn btn-outline-danger">📄 Exportar PDF</a>
+        </div>
+    </form>
+
+    <div class="row text-center g-3">
+        <div class="col-md-3">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="card-title">Garrafones llenados</div>
+                    <h4>{{ garrafones }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="card-title">Garrafones vendidos</div>
+                    <h4>{{ garrafones }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="card-title">Total ingresos</div>
+                    <h4>${{ ingresos }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-custom">
+                <div class="card-body">
+                    <div class="card-title">Ganancia del día</div>
+                    <h4>${{ ganancia }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="section-title">📦 Registrar Ventas</h4>
+<form class="row g-2 mb-4" action="/agregar_venta" method="post">
+    <div class="col-md">
+        <input type="number" name="garrafones" placeholder="Garrafones" required class="form-control">
+    </div>
+    <div class="col-md">
+        <input type="number" step="0.01" name="precio" placeholder="Precio unitario" required class="form-control">
+    </div>
+    <div class="col-md">
+        <select name="metodo" required class="form-control">
+            <option value="" disabled selected>Método de pago</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Transferencia">Transferencia</option>
+        </select>
+    </div>
+    <div class="col-md">
+        <input type="text" name="cliente" placeholder="Cliente" class="form-control">
+    </div>
+    <div class="col-md-auto">
+        <button class="btn btn-primary w-100">Agregar Venta</button>
+    </div>
+</form>
+
+    <table class="table table-bordered table-sm">
+        <thead><tr><th>Fecha</th><th>Garrafones</th><th>Precio</th><th>Método</th><th>Cliente</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for v in ventas %}
+            <tr>
+                <td>{{ v[1] }}</td>
+                <td>{{ v[2] }}</td>
+                <td>${{ v[3] }}</td>
+                <td>{{ v[4] }}</td>
+                <td>{{ v[5] }}</td>
+                <td>
+                    <a href="/editar_venta/{{ v[0] }}" class="btn btn-sm btn-warning">Editar</a>
+                    <a href="/eliminar_venta/{{ v[0] }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta venta?')">Eliminar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <h4 class="section-title">💸 Registrar Gastos</h4>
+    <form class="row g-2 mb-4" action="/agregar_gasto" method="post">
+        <div class="col-md"><input type="text" name="descripcion" placeholder="Descripción" required class="form-control"></div>
+        <div class="col-md"><input type="number" step="0.01" name="monto" placeholder="Monto" required class="form-control"></div>
+        <div class="col-md-auto"><button class="btn btn-danger w-100">Agregar Gasto</button></div>
+    </form>
+
+    <table class="table table-bordered table-sm">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for g in gastos %}
+            <tr>
+                <td>{{ g[1] }}</td>
+                <td>{{ g[2] }}</td>
+                <td>${{ g[3] }}</td>
+                <td>
+                    <a href="/editar_gasto/{{ g[0] }}" class="btn btn-sm btn-warning">Editar</a>
+                    <a href="/eliminar_gasto/{{ g[0] }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este gasto?')">Eliminar</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

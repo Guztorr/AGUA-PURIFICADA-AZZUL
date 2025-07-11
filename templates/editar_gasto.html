@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Gasto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h3 class="text-danger">Editar Gasto</h3>
+    <form method="post">
+        <div class="mb-3">
+            <label>Descripción:</label>
+            <input type="text" name="descripcion" value="{{ gasto[2] }}" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label>Monto:</label>
+            <input type="number" step="0.01" name="monto" value="{{ gasto[3] }}" class="form-control" required>
+        </div>
+        <button class="btn btn-success">Guardar Cambios</button>
+        <a href="/" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+</body>
+</html>
