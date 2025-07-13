@@ -73,8 +73,12 @@
         </tbody>
     </table>
 
-    <a href="/" class="btn btn-secondary mt-3">Volver al inicio</a>
+    <div class="d-flex justify-content-between mt-3">
+    <a href="/" class="btn btn-secondary">← Volver al inicio</a>
     <a href="{{ url_for('cerrar_nominas') }}" class="btn btn-danger mt-3">Cerrar Nóminas</a>
+    <a href="{{ url_for('exportar_nominas') }}" class="btn btn-danger">📄 Exportar Nóminas a PDF</a>
+</div>
+
 </div>
 </body>
 </html>
