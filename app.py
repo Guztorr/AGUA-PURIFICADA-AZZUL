@@ -483,6 +483,111 @@ def exportar_pdf():
     buffer.seek(0)
     return send_file(buffer, as_attachment=True, download_name=f"resumen_{fecha}.pdf", mimetype='application/pdf')
 
+@app.route('/exportar_inventario')
+def exportar_inventario():
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("<b>Inventario - Agua Purificada Azul</b>", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT producto, cantidad, costo_unitario FROM inventario")
+    productos = c.fetchall()
+    conn.close()
+
+    if productos:
+        data = [['Producto', 'Cantidad', 'Costo Unitario', 'Subtotal']]
+        total_inventario = 0
+        for p in productos:
+            subtotal = p[1] * p[2]
+            total_inventario += subtotal
+            data.append([p[0], p[1], f"${p[2]:.2f}", f"${subtotal:.2f}"])
+
+        data.append(['', '', 'Total', f"${total_inventario:.2f}"])
+
+        tabla = Table(data, colWidths=[150, 100, 120, 120])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(tabla)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="inventario.pdf", mimetype='application/pdf')
+
+@app.route('/exportar_nominas')
+def exportar_nominas():
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("<b>Nóminas - Agua Purificada Azul</b>", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT fecha_pago, empleado, rol, dias_laborados, salario_diario, observaciones FROM nominas")
+    registros = c.fetchall()
+    conn.close()
+
+    if registros:
+        data = [['Fecha', 'Empleado', 'Rol', 'Días', 'Salario Diario', 'Sueldo', 'Observaciones']]
+        for r in registros:
+            sueldo = r[3] * r[4]
+            data.append([r[0], r[1], r[2], r[3], f"${r[4]:.2f}", f"${sueldo:.2f}", r[5]])
+
+        tabla = Table(data, colWidths=[70, 100, 80, 40, 80, 80, 150])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (3, 1), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(tabla)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="nominas.pdf", mimetype='application/pdf')
+
+@app.route('/exportar_creditos')
+def exportar_creditos():
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("<b>Créditos - Agua Purificada Azul</b>", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT fecha, cliente, monto_total, saldo, estado FROM creditos")
+    creditos = c.fetchall()
+    conn.close()
+
+    if creditos:
+        data = [['Fecha', 'Cliente', 'Total', 'Saldo', 'Estado']]
+        for cr in creditos:
+            data.append([cr[0], cr[1], f"${cr[2]:.2f}", f"${cr[3]:.2f}", cr[4]])
+
+        tabla = Table(data, colWidths=[80, 120, 80, 80, 80])
+        tabla.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightcoral),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(tabla)
+
+    doc.build(elements)
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="creditos.pdf", mimetype='application/pdf')
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
