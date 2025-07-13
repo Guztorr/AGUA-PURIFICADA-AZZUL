@@ -1,12 +1,18 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 from datetime import datetime
 import sqlite3
-from flask import send_file
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = 'azul123'
+
+# PIN para acceder a nominas
+NOMINA_PIN = "13579"
 
 def init_db():
     conn = sqlite3.connect('azul.db')
@@ -17,15 +23,197 @@ def init_db():
                     garrafones INTEGER,
                     precio_unitario REAL,
                     metodo_pago TEXT,
-                    cliente TEXT)''')
+                    cliente TEXT,
+                    chofer TEXT)''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS gastos (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     fecha TEXT,
                     descripcion TEXT,
                     monto REAL)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS inventario (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    producto TEXT,
+                    cantidad INTEGER,
+                    unidad TEXT,
+                    costo_unitario REAL,
+                    actualizado TEXT)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS nominas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha_pago TEXT,
+                    empleado TEXT,
+                    rol TEXT,
+                    dias_laborados INTEGER,
+                    salario_diario REAL,
+                    observaciones TEXT)''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS creditos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    fecha TEXT,
+                    cliente TEXT,
+                    monto_total REAL,
+                    saldo REAL,
+                    estado TEXT)''')
     conn.commit()
     conn.close()
+
+@app.route('/acceso_nominas', methods=['GET', 'POST'])
+def acceso_nominas():
+    if request.method == 'POST':
+        pin = request.form['pin']
+        if pin == NOMINA_PIN:
+            session['autorizado_nomina'] = True
+            return redirect(url_for('ver_nominas'))
+        else:
+            return render_template('acceso_nominas.html', error="Código incorrecto")
+    return render_template('acceso_nominas.html')
+
+@app.route('/cerrar_nominas')
+def cerrar_nominas():
+    session.pop('nominas_autorizado', None)
+    return redirect(url_for('index'))
+
+@app.route('/nominas', methods=['GET', 'POST'])
+def ver_nominas():
+    if request.method == 'POST':
+        pin = request.form.get('pin')
+        if pin != '13579':  # Puedes cambiar el pin aquí
+            return render_template('acceso_nominas.html', error="Código incorrecto.")
+        session['nominas_autorizado'] = True
+        return redirect(url_for('ver_nominas'))
+
+    if not session.get('nominas_autorizado'):
+        return render_template('acceso_nominas.html')
+
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM nominas")
+    registros = c.fetchall()
+    conn.close()
+    return render_template('nominas.html', registros=registros)
+
+@app.route('/agregar_nomina', methods=['POST'])
+def agregar_nomina():
+    fecha_pago = request.form['fecha_pago']
+    empleado = request.form['empleado']
+    rol = request.form['rol']
+    dias = int(request.form['dias_laborados'])
+    salario_diario = float(request.form['salario_diario'])
+    observaciones = request.form['observaciones']
+
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO nominas (fecha_pago, empleado, rol, dias_laborados, salario_diario, observaciones)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (fecha_pago, empleado, rol, dias, salario_diario, observaciones))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('ver_nominas'))
+
+@app.route('/editar_nomina/<int:id>', methods=['GET', 'POST'])
+def editar_nomina(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    if request.method == 'POST':
+        fecha_pago = request.form['fecha_pago']
+        empleado = request.form['empleado']
+        rol = request.form['rol']
+        dias_laborados = int(request.form['dias_laborados'])
+        salario_diario = float(request.form['salario_diario'])
+        observaciones = request.form['observaciones']
+
+        c.execute("""
+            UPDATE nominas
+            SET fecha_pago = ?, empleado = ?, rol = ?, dias_laborados = ?, salario_diario = ?, observaciones = ?
+            WHERE id = ?
+        """, (fecha_pago, empleado, rol, dias_laborados, salario_diario, observaciones, id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('ver_nominas'))
+    else:
+        c.execute("SELECT * FROM nominas WHERE id = ?", (id,))
+        registro = c.fetchone()
+        conn.close()
+        return render_template('editar_nomina.html', registro=registro)
+
+@app.route('/eliminar_nomina/<int:id>')
+def eliminar_nomina(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM nominas WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('ver_nominas'))
+
+@app.route('/creditos')
+def ver_creditos():
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM creditos")
+    creditos = c.fetchall()
+    conn.close()
+    return render_template('creditos.html', creditos=creditos)
+
+@app.route('/agregar_credito', methods=['POST'])
+def agregar_credito():
+    fecha = datetime.today().strftime('%Y-%m-%d')
+    cliente = request.form['cliente']
+    monto = float(request.form['monto'])
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO creditos (fecha, cliente, monto_total, saldo, estado) VALUES (?, ?, ?, ?, ?)",
+              (fecha, cliente, monto, monto, 'Pendiente'))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('ver_creditos'))
+
+@app.route('/abono_credito/<int:id>', methods=['GET', 'POST'])
+def abono_credito(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        abono = float(request.form['abono'])
+        # Obtener saldo actual
+        c.execute("SELECT saldo FROM creditos WHERE id = ?", (id,))
+        saldo_actual = c.fetchone()[0]
+
+        # Restar abono al saldo
+        nuevo_saldo = saldo_actual - abono
+        estado = 'Liquidado' if nuevo_saldo <= 0 else 'Pendiente'
+
+        c.execute("UPDATE creditos SET saldo = ?, estado = ? WHERE id = ?", (nuevo_saldo, estado, id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('ver_creditos'))
+
+    else:
+        # GET: mostrar formulario
+        c.execute("SELECT * FROM creditos WHERE id = ?", (id,))
+        credito = c.fetchone()
+        conn.close()
+        return render_template("abono_credito.html", credito=credito)
+
+@app.route('/liquidar_credito/<int:id>')
+def liquidar_credito(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("UPDATE creditos SET saldo = 0, estado = 'Liquidado' WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('ver_creditos'))
+
+@app.route('/eliminar_credito/<int:id>')
+def eliminar_credito(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM creditos WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('ver_creditos'))
 
 @app.route('/')
 def index():
@@ -65,11 +253,22 @@ def agregar_venta():
     precio = float(request.form['precio'])
     metodo = request.form['metodo']
     cliente = request.form['cliente']
+    chofer = request.form['chofer']
+    
+    subtotal = garrafones * precio
 
     conn = sqlite3.connect('azul.db')
     c = conn.cursor()
-    c.execute("INSERT INTO ventas (fecha, garrafones, precio_unitario, metodo_pago, cliente) VALUES (?, ?, ?, ?, ?)",
-              (fecha, garrafones, precio, metodo, cliente))
+    c.execute("""INSERT INTO ventas (fecha, garrafones, precio_unitario, metodo_pago, cliente, chofer) 
+                 VALUES (?, ?, ?, ?, ?, ?)""",
+              (fecha, garrafones, precio, metodo, cliente, chofer))
+
+    # Si es crédito, registrar en tabla de créditos
+    if metodo.lower() == 'credito':
+        c.execute("""INSERT INTO creditos (fecha, cliente, monto_total, saldo, estado)
+                     VALUES (?, ?, ?, ?, ?)""",
+                  (fecha, cliente, subtotal, subtotal, 'Pendiente'))
+
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
@@ -144,16 +343,64 @@ def editar_gasto(id):
         conn.close()
         return render_template('editar_gasto.html', gasto=gasto)
 
+@app.route('/inventario')
+def inventario():
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM inventario")
+    productos = c.fetchall()
+    conn.close()
+    return render_template("inventario.html", productos=productos)
+
+@app.route('/agregar_producto', methods=['POST'])
+def agregar_producto():
+    producto = request.form['producto']
+    cantidad = int(request.form['cantidad'])
+    unidad = request.form['unidad']
+    costo_unitario = float(request.form['costo_unitario'])
+    actualizado = datetime.today().strftime('%Y-%m-%d')
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO inventario (producto, cantidad, unidad, costo_unitario, actualizado) VALUES (?, ?, ?, ?, ?)",
+              (producto, cantidad, unidad, costo_unitario, actualizado))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventario'))
+
+@app.route('/eliminar_producto/<int:id>')
+def eliminar_producto(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM inventario WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventario'))
+
+@app.route('/editar_producto/<int:id>', methods=['GET', 'POST'])
+def editar_producto(id):
+    conn = sqlite3.connect('azul.db')
+    c = conn.cursor()
+    if request.method == 'POST':
+        producto = request.form['producto']
+        cantidad = int(request.form['cantidad'])
+        unidad = request.form['unidad']
+        costo_unitario = float(request.form['costo_unitario'])
+        actualizado = datetime.today().strftime('%Y-%m-%d')
+        c.execute("UPDATE inventario SET producto = ?, cantidad = ?, unidad = ?, costo_unitario = ?, actualizado = ? WHERE id = ?",
+                  (producto, cantidad, unidad, costo_unitario, actualizado, id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('inventario'))
+    else:
+        c.execute("SELECT * FROM inventario WHERE id = ?", (id,))
+        item = c.fetchone()
+        conn.close()
+        if item is None:
+            return "Producto no encontrado", 404
+        return render_template('editar_producto.html', item=item)
+
 @app.route('/exportar_pdf')
 def exportar_pdf():
-    from flask import send_file
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib import colors
-    from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    from io import BytesIO
-
     fecha = request.args.get('fecha')
     if not fecha:
         fecha = datetime.today().strftime('%Y-%m-%d')
@@ -178,14 +425,12 @@ def exportar_pdf():
     elements = []
     styles = getSampleStyleSheet()
 
-    # Encabezado
     title = Paragraph("<b style='font-size:16pt;'>AGUA PURIFICADA AZZUL</b>", styles['Title'])
     elements.append(title)
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(f"<b>Fecha:</b> {fecha}", styles['Normal']))
     elements.append(Spacer(1, 12))
 
-    # Resumen
     resumen_data = [
         ['Garrafones vendidos', garrafones_vendidos],
         ['Ingresos totales', f"${total_ventas:.2f}"],
@@ -203,7 +448,6 @@ def exportar_pdf():
     elements.append(resumen_table)
     elements.append(Spacer(1, 20))
 
-    # Ventas
     if ventas:
         ventas_data = [['Garrafones', 'Precio', 'Método', 'Cliente']]
         for v in ventas:
@@ -220,7 +464,6 @@ def exportar_pdf():
         elements.append(ventas_table)
         elements.append(Spacer(1, 20))
 
-    # Gastos
     if gastos:
         gastos_data = [['Descripción', 'Monto']]
         for g in gastos:
