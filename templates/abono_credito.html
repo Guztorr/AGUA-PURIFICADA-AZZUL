@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Abonar Crédito</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h3 class="text-primary">💳 Abonar al crédito de {{ credito[2] }}</h3>
+
+    <p><b>Fecha:</b> {{ credito[1] }}</p>
+    <p><b>Monto Total:</b> ${{ '%.2f'|format(credito[3]) }}</p>
+    <p><b>Saldo Actual:</b> ${{ '%.2f'|format(credito[4]) }}</p>
+    <p><b>Estado:</b> {{ credito[5] }}</p>
+
+    <form method="POST" class="mt-4">
+        <div class="mb-3">
+            <label for="abono" class="form-label">Monto a abonar</label>
+            <input type="number" step="0.01" name="abono" id="abono" class="form-control" required>
+        </div>
+        <button class="btn btn-success">Abonar</button>
+        <a href="/creditos" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+</body>
+</html>

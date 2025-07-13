@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nóminas - Agua Purificada Azul</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h2 class="text-primary mb-4">Nóminas</h2>
+
+    <!-- Formulario para agregar nueva nómina -->
+    <form action="{{ url_for('agregar_nomina') }}" method="POST" class="row g-3 mb-4 bg-white p-4 rounded shadow-sm">
+        <div class="col-md-3">
+            <label class="form-label">Fecha de Pago</label>
+            <input type="date" name="fecha_pago" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Empleado</label>
+            <input type="text" name="empleado" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Rol</label>
+            <input type="text" name="rol" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Días Laborados</label>
+            <input type="number" name="dias_laborados" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Salario Diario</label>
+            <input type="number" step="0.01" name="salario_diario" class="form-control" required>
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Observaciones</label>
+            <input type="text" name="observaciones" class="form-control">
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+            <button type="submit" class="btn btn-success mt-2">Agregar</button>
+        </div>
+    </form>
+
+    <!-- Tabla de nóminas -->
+    <table class="table table-bordered table-hover bg-white shadow-sm">
+        <thead class="table-primary">
+            <tr>
+                <th>Fecha</th>
+                <th>Empleado</th>
+                <th>Rol</th>
+                <th>Días</th>
+                <th>Salario Diario</th>
+                <th>Sueldo</th>
+                <th>Observaciones</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for n in registros %}
+            <tr>
+                <td>{{ n[1] }}</td>
+                <td>{{ n[2] }}</td>
+                <td>{{ n[3] }}</td>
+                <td>{{ n[4] }}</td>
+                <td>${{ '%.2f'|format(n[5]) }}</td>
+                <td>${{ '%.2f'|format(n[4] * n[5]) }}</td>
+                <td>{{ n[6] }}</td>
+                <td>
+                    <a href="{{ url_for('editar_nomina', id=n[0]) }}" class="btn btn-warning btn-sm">Editar</a>
+                    <a href="{{ url_for('eliminar_nomina', id=n[0]) }}" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar este registro?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/" class="btn btn-secondary mt-3">Volver al inicio</a>
+    <a href="{{ url_for('cerrar_nominas') }}" class="btn btn-danger mt-3">Cerrar Nóminas</a>
+</div>
+</body>
+</html>

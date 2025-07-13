@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Créditos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <h2 class="text-primary mb-4">📑 Ver Créditos</h2>
+
+    <form action="/agregar_credito" method="POST" class="row g-3 bg-white p-3 rounded shadow-sm mb-4">
+        <div class="col-md-3">
+            <input type="date" name="fecha" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+            <input type="text" name="cliente" class="form-control" placeholder="Cliente" required>
+        </div>
+        <div class="col-md-3">
+            <input type="number" step="0.01" name="monto" class="form-control" placeholder="Monto Total" required>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-success w-100">Agregar Crédito</button>
+        </div>
+    </form>
+
+    <table class="table table-bordered shadow-sm">
+        <thead class="table-secondary">
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Monto Total</th>
+                <th>Saldo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in creditos %}
+            <tr>
+                <td>{{ c[1] }}</td>
+                <td>{{ c[2] }}</td>
+                <td>${{ '%.2f'|format(c[3]) }}</td>
+                <td>${{ '%.2f'|format(c[4]) }}</td>
+                <td>{{ c[5] }}</td>
+                <td>
+                    <a href="/abono_credito/{{ c[0] }}" class="btn btn-sm btn-warning">Abono</a>
+                    <a href="/liquidar_credito/{{ c[0] }}" class="btn btn-sm btn-success">Liquidado</a>
+                    <a href="{{ url_for('eliminar_credito', id=c[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este crédito?')">Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="/" class="btn btn-secondary mt-3">Volver al inicio</a>
+</div>
+</body>
+</html>
